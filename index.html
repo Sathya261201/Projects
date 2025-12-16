@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users Table</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f7f7f7;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 80%;
+            margin: auto;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #4CAF50;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background: #f2f2f2;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 18px;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>User List</h2>
+    <div style="max-width:800px;margin:0 auto 20px;">
+        <form id="createForm" style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
+            <input id="nameInput" placeholder="Name" />
+            <input id="emailInput" placeholder="Email" />
+            <button type="submit">Create</button>
+        </form>
+
+        <div class="loading" id="loading">Loading users...</div>
+
+        <table id="userTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const API = "/users"; // relative path served by server
+
+        async function fetchUsers() {
+            const res = await fetch(API);
+            if (!res.ok) throw new Error('Failed to load');
+            return res.json();
+        }
+
+        async function render() {
+            const tableBody = document.getElementById("tableBody");
+            const table = document.getElementById("userTable");
+            const loading = document.getElementById("loading");
+
+            try {
+                const users = await fetchUsers();
+                loading.style.display = "none";
+                table.style.display = "table";
+                tableBody.innerHTML = "";
+
+                users.forEach(user => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${escapeHtml(user.name)}</td>
+                        <td>${escapeHtml(user.email)}</td>
+                        <td>
+                          <button data-id="${user.id}" class="edit">Edit</button>
+                          <button data-id="${user.id}" class="delete">Delete</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            } catch (err) {
+                loading.innerText = "Failed to load users.";
+                console.error(err);
+            }
+        }
+
+        function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+
+        // Create
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('nameInput').value.trim();
+            const email = document.getElementById('emailInput').value.trim();
+            if (!name || !email) return alert('Name and email required');
+
+            const res = await fetch(API, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email })
+            });
+            if (!res.ok) { alert('Create failed'); return; }
+            document.getElementById('nameInput').value='';
+            document.getElementById('emailInput').value='';
+            render();
+        });
+
+        // Delegated actions: Edit / Delete
+        document.getElementById('tableBody').addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            if (!id) return;
+
+            if (e.target.classList.contains('delete')) {
+                if (!confirm('Delete user?')) return;
+                const res = await fetch(API + '/' + id, { method: 'DELETE' });
+                if (!res.ok) return alert('Delete failed');
+                render();
+            }
+
+            if (e.target.classList.contains('edit')) {
+                // fetch user and prompt for new values
+                const r = await fetch(API + '/' + id);
+                if (!r.ok) return alert('Failed to fetch user');
+                const user = await r.json();
+                const newName = prompt('Name', user.name);
+                const newEmail = prompt('Email', user.email);
+                if (!newName || !newEmail) return alert('Both fields required');
+                const res = await fetch(API + '/' + id, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName, email: newEmail })
+                });
+                if (!res.ok) return alert('Update failed');
+                render();
+            }
+        });
+
+        // initial load
+        render();
+    </script>
+
+</body>
+</html>
