@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel – CRUD</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Admin – User Management</h1>
+
+  <form id="userForm">
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <button id="submitBtn" type="submit">Add User</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="users"></tbody>
+  </table>
+
+  <script src="script.js"></script>
+</body>
+</html>
